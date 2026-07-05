@@ -1,6 +1,6 @@
 export const doneZoneConfig = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://phemaiswganfskmhjvkf.supabase.co",
+  supabaseAnonKey: "sb_publishable_NLobabFzOOdEHa4YOvFyZg_BSYWcNv0",
 };
 
 export function isSupabaseConfigured() {
