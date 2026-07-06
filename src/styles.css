@@ -168,6 +168,10 @@ svg {
   font-size: 13px;
 }
 
+.auth-credit {
+  margin-top: -6px;
+}
+
 .app-shell {
   display: flex;
   min-height: 100vh;
