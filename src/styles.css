@@ -295,6 +295,49 @@ svg {
   margin: 6px 0 0;
 }
 
+.active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tag-color, var(--warning)) 14%, var(--surface));
+  color: var(--tag-color, var(--warning));
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+
+.active-filter-chip svg,
+.active-filter-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.active-filter-clear {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tag-color, var(--warning)) 10%, transparent);
+  color: var(--tag-color, var(--warning));
+  cursor: pointer;
+  padding: 0;
+}
+
+.active-filter-clear:hover {
+  background: color-mix(in srgb, var(--tag-color, var(--warning)) 18%, transparent);
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -767,6 +810,21 @@ svg {
   font-size: 12px;
   font-weight: 800;
   padding: 5px 8px;
+}
+
+.tag-pill-button {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.tag-pill-button:hover,
+.tag-pill-button.active {
+  background: color-mix(in srgb, var(--tag-color, var(--warning)) 20%, var(--surface));
+}
+
+.tag-pill-button.active {
+  box-shadow: inset 0 0 0 1px var(--tag-color, var(--warning));
 }
 
 .due-button {
