@@ -400,10 +400,12 @@ function renderApp() {
             <button class="action-button" type="button" title="Refresh" data-action="refresh">${svgIcon("refresh")}</button>
             <button class="action-button ${state.showArchived ? "active" : ""}" type="button" title="${state.showArchived ? "Hide archived" : "Show archived"}" data-action="toggle-archived">${svgIcon("archive")}</button>
             <button class="action-button" type="button" title="Back up board" data-action="backup">${svgIcon("backup")}</button>
+            <button class="action-button" type="button" title="Manage labels" data-action="open-labels">${svgIcon("tag")}</button>
             <details class="menu-wrap board-menu">
               <summary class="action-button menu-trigger" title="Board options" aria-label="Board options">${svgIcon("more")}</summary>
               <div class="options-menu">
                 <button class="menu-item" type="button" data-action="open-board-form" data-board-id="${state.activeBoard?.id || ""}">${svgIcon("edit")}Edit Board</button>
+                <button class="menu-item" type="button" data-action="open-labels">${svgIcon("tag")}Manage Labels</button>
                 <button class="menu-item" type="button" data-action="backup">${svgIcon("backup")}Back Up Board</button>
                 <button class="menu-item" type="button" data-action="open-restore">${svgIcon("restore")}Restore Backup</button>
                 <button class="menu-item" type="button" data-action="open-backup-settings">${svgIcon("settings")}Automatic Backup Settings</button>
@@ -571,6 +573,7 @@ function renderModal() {
   if (state.modal.type === "board-form") return renderBoardModal();
   if (state.modal.type === "list-form") return renderListModal();
   if (state.modal.type === "card-form") return renderCardModal();
+  if (state.modal.type === "labels") return renderLabelsModal();
   if (state.modal.type === "transfer-card") return renderTransferModal();
   if (state.modal.type === "restore") return renderRestoreModal();
   if (state.modal.type === "backup-settings") return renderBackupSettingsModal();
@@ -656,14 +659,21 @@ function renderCardModal() {
           <span>Done</span>
         </label>
         <fieldset class="tag-picker">
-          <legend>Labels</legend>
+          <div class="tag-picker-header">
+            <span class="tag-picker-title">Labels</span>
+            <button class="ghost-button compact-button" type="button" data-action="open-labels">${svgIcon("tag")}Manage Labels</button>
+          </div>
           <div class="tag-options">
-            ${state.tags.map((tag) => `
-              <label class="tag-choice" style="--tag-color: ${escapeAttribute(tag.color)}">
-                <input name="tagIds" type="checkbox" value="${tag.id}" ${selectedTagIds.has(tag.id) ? "checked" : ""} />
-                <span>${escapeHtml(tag.name)}</span>
-              </label>
-            `).join("")}
+            ${
+              state.tags.length
+                ? state.tags.map((tag) => `
+                  <label class="tag-choice" style="--tag-color: ${escapeAttribute(tag.color)}">
+                    <input name="tagIds" type="checkbox" value="${tag.id}" ${selectedTagIds.has(tag.id) ? "checked" : ""} />
+                    <span>${escapeHtml(tag.name)}</span>
+                  </label>
+                `).join("")
+                : '<p class="dialog-copy">Create a label to tag this task.</p>'
+            }
           </div>
         </fieldset>
         <div class="dialog-actions">
@@ -674,6 +684,56 @@ function renderCardModal() {
     `,
     "wide-dialog",
   );
+}
+
+function renderLabelsModal() {
+  return renderDialog(
+    "Manage Labels",
+    `
+      <form class="label-create-form" data-form="label-create">
+        <label class="field">
+          <span>New label</span>
+          <input class="text-input" name="name" type="text" maxlength="40" placeholder="Label name" required autofocus />
+        </label>
+        <label class="field color-field">
+          <span>Color</span>
+          <input class="color-input" name="color" type="color" value="#2563eb" aria-label="New label color" />
+        </label>
+        <button class="primary-button" type="submit">${svgIcon("add")}Add Label</button>
+      </form>
+      <div class="label-manager-list">
+        ${
+          state.tags.length
+            ? state.tags.map(renderLabelRow).join("")
+            : '<div class="empty-list">No labels yet</div>'
+        }
+      </div>
+    `,
+    "wide-dialog",
+  );
+}
+
+function renderLabelRow(tag) {
+  return `
+    <form class="label-row" data-form="label-update">
+      <input type="hidden" name="tagId" value="${tag.id}" />
+      <div class="label-row-preview" style="--tag-color: ${escapeAttribute(tag.color)}">
+        ${renderTagPill(tag)}
+      </div>
+      <label class="field label-name-field">
+        <span>Name</span>
+        <input class="text-input" name="name" type="text" value="${escapeAttribute(tag.name)}" maxlength="40" required />
+      </label>
+      <label class="field color-field">
+        <span>Color</span>
+        <input class="color-input" name="color" type="color" value="${escapeAttribute(normalizeColor(tag.color, "#2563eb"))}" aria-label="${escapeAttribute(tag.name)} color" />
+      </label>
+      <div class="label-row-actions">
+        <button class="secondary-button compact-button" type="submit">${svgIcon("check")}Save</button>
+        <button class="ghost-button compact-button danger-text" type="button" data-action="confirm-delete-label" data-tag-id="${tag.id}">${svgIcon("trash")}Delete</button>
+      </div>
+    </form>
+  `;
 }
 
 function renderTransferModal() {
@@ -829,6 +889,8 @@ async function handleSubmit(event) {
     "backup-settings": () => submitBackupSettings(formData),
     board: () => submitBoardForm(formData),
     card: () => submitCardForm(formData),
+    "label-create": () => submitLabelCreate(formData),
+    "label-update": () => submitLabelUpdate(formData),
     list: () => submitListForm(formData),
   };
 
@@ -862,6 +924,7 @@ async function handleClick(event) {
     "open-board-form": () => openModal({ type: "board-form", boardId: button.dataset.boardId || null }),
     "open-card-form": () => openModal({ type: "card-form", cardId: button.dataset.cardId || null, listId: button.dataset.listId || null }),
     "open-copy-card": () => openTransferModal("copy", button.dataset.cardId),
+    "open-labels": () => openModal({ type: "labels" }),
     "open-list-form": () => openModal({ type: "list-form", listId: button.dataset.listId || null }),
     "open-move-card": () => openTransferModal("move", button.dataset.cardId),
     "open-restore": () => openModal({ type: "restore" }),
@@ -875,6 +938,7 @@ async function handleClick(event) {
   const confirmActions = {
     "confirm-delete-board": () => confirmDeleteBoard(button.dataset.boardId),
     "confirm-delete-card": () => confirmDeleteCard(button.dataset.cardId),
+    "confirm-delete-label": () => confirmDeleteLabel(button.dataset.tagId),
     "confirm-delete-list": () => confirmDeleteList(button.dataset.listId),
   };
 
@@ -1058,8 +1122,23 @@ async function submitCardForm(formData) {
 
   let savedCardId = cardId;
   if (cardId) {
-    const { error } = await supabase.from("cards").update(cardPayload).eq("id", cardId);
+    const existingCard = state.cards.find((card) => card.id === cardId);
+    if (!existingCard) throw new Error("Task not found.");
+
+    const { list_id: _listId, ...detailsPayload } = cardPayload;
+    const { data, error } = await supabase
+      .from("cards")
+      .update(detailsPayload)
+      .eq("id", cardId)
+      .eq("board_id", state.activeBoard.id)
+      .eq("user_id", state.user.id)
+      .select("id")
+      .maybeSingle();
     throwIfSupabaseError(error);
+    if (!data?.id) throw new Error("DoneZone could not update that task.");
+    if (existingCard.list_id !== listId) {
+      await moveCardToList(cardId, listId);
+    }
     state.notice = "Task updated.";
   } else {
     const { data, error } = await supabase
@@ -1079,6 +1158,54 @@ async function submitCardForm(formData) {
 
   await replaceCardTags(savedCardId, formData.getAll("tagIds"));
   closeModal(false);
+}
+
+async function submitLabelCreate(formData) {
+  const name = String(formData.get("name") || "").trim();
+  const color = normalizeColor(formData.get("color"), "#2563eb");
+  if (!name) throw new Error("Label name is required.");
+  if (hasDuplicateTagName(name)) {
+    throw new Error(`A label named "${name}" already exists.`);
+  }
+
+  const { data, error } = await supabase
+    .from("tags")
+    .insert({
+      user_id: state.user.id,
+      name,
+      color,
+      sort_order: getNextSortOrder(state.tags),
+    })
+    .select("id")
+    .single();
+
+  throwIfSupabaseError(error);
+  if (!data?.id) throw new Error("DoneZone could not create that label.");
+  state.notice = "Label created.";
+}
+
+async function submitLabelUpdate(formData) {
+  const tagId = String(formData.get("tagId") || "");
+  const tag = state.tags.find((item) => item.id === tagId);
+  const name = String(formData.get("name") || "").trim();
+  const color = normalizeColor(formData.get("color"), tag?.color || "#2563eb");
+  if (!tag) throw new Error("Label not found.");
+  if (!name) throw new Error("Label name is required.");
+  if (hasDuplicateTagName(name, tagId)) {
+    throw new Error(`A label named "${name}" already exists.`);
+  }
+
+  const { data, error } = await supabase
+    .from("tags")
+    .update({ name, color })
+    .eq("id", tagId)
+    .eq("user_id", state.user.id)
+    .select("id")
+    .maybeSingle();
+
+  throwIfSupabaseError(error);
+  if (!data?.id) throw new Error("DoneZone could not update that label.");
+  state.notice = "Label updated.";
 }
 
 async function submitBackupSettings(formData) {
@@ -1187,15 +1314,7 @@ async function transferCard(targetListId) {
     await replaceCardTags(data.id, getTagIdsForCard(card.id));
     state.notice = "Task copied.";
   } else {
-    const { error } = await supabase
-      .from("cards")
-      .update({
-        list_id: targetList.id,
-        archived: false,
-        sort_order: getNextSortOrder(getCardsForList(targetList.id)),
-      })
-      .eq("id", card.id);
-    throwIfSupabaseError(error);
+    await moveCardToList(card.id, targetList.id);
     state.notice = "Task moved.";
   }
 
@@ -1299,6 +1418,31 @@ async function deleteCard(cardId) {
   const { error } = await supabase.from("cards").delete().eq("id", cardId);
   throwIfSupabaseError(error);
   state.notice = "Task deleted.";
+}
+
+async function deleteLabel(tagId) {
+  const tag = state.tags.find((item) => item.id === tagId);
+  if (!tag) return;
+
+  await backupBoard("Before label deletion", { quiet: true, force: true });
+  const { error: cardTagError } = await supabase
+    .from("card_tags")
+    .delete()
+    .eq("tag_id", tag.id)
+    .eq("user_id", state.user.id);
+  throwIfSupabaseError(cardTagError);
+
+  const { data, error } = await supabase
+    .from("tags")
+    .delete()
+    .eq("id", tag.id)
+    .eq("user_id", state.user.id)
+    .select("id")
+    .maybeSingle();
+
+  throwIfSupabaseError(error);
+  if (!data?.id) throw new Error("DoneZone could not delete that label.");
+  state.notice = "Label deleted.";
 }
 
 async function backupBoard(reason = "Manual backup", options = {}) {
@@ -1453,10 +1597,60 @@ async function updateCardOrder(listId, orderedCards) {
       supabase
         .from("cards")
         .update({ list_id: listId, sort_order: index, archived: false })
-        .eq("id", card.id),
+        .eq("id", card.id)
+        .eq("board_id", state.activeBoard.id)
+        .eq("user_id", state.user.id)
+        .select("id")
+        .maybeSingle(),
     ),
   );
-  results.forEach((result) => throwIfSupabaseError(result.error));
+  results.forEach((result) => {
+    throwIfSupabaseError(result.error);
+    if (!result.data?.id) {
+      throw new Error("DoneZone could not update one of the task positions.");
+    }
+  });
+}
+
+async function moveCardToList(cardId, targetListId, options = {}) {
+  const card = state.cards.find((item) => item.id === cardId);
+  const targetList = getListById(targetListId);
+  if (!card) throw new Error("Task not found.");
+  if (!targetList) throw new Error("Destination list not found.");
+  if (targetList.locked) throw new Error(`Unlock "${targetList.title}" before moving tasks into it.`);
+
+  const sourceListId = card.list_id;
+  const sourceCards = getCardsForList(sourceListId).filter((item) => !item.archived && item.id !== card.id);
+  const targetCards = getCardsForList(targetList.id).filter((item) => !item.archived && item.id !== card.id);
+
+  let insertIndex = targetCards.length;
+  if (options.targetCardId && options.targetCardId !== card.id) {
+    const targetIndex = targetCards.findIndex((item) => item.id === options.targetCardId);
+    if (targetIndex >= 0) insertIndex = targetIndex + (options.insertAfter ? 1 : 0);
+  }
+
+  const boundedIndex = Math.max(0, Math.min(insertIndex, targetCards.length));
+  targetCards.splice(boundedIndex, 0, { ...card, list_id: targetList.id, archived: false });
+
+  if (sourceListId === targetList.id) {
+    await updateCardOrder(targetList.id, targetCards);
+  } else {
+    await updateCardOrder(sourceListId, sourceCards);
+    await updateCardOrder(targetList.id, targetCards);
+  }
+
+  const { data, error } = await supabase
+    .from("cards")
+    .select("id, list_id")
+    .eq("id", card.id)
+    .eq("list_id", targetList.id)
+    .eq("user_id", state.user.id)
+    .maybeSingle();
+
+  throwIfSupabaseError(error);
+  if (!data?.id) {
+    throw new Error("DoneZone could not verify that the task moved. Please refresh and try again.");
+  }
 }
 
 function handleDragStart(event) {
@@ -1574,16 +1768,10 @@ async function handleDrop(event) {
     const targetList = getListById(targetListId);
     const card = state.cards.find((item) => item.id === draggedCardId);
     if (!targetList || !card || targetList.locked) return;
+    if (targetCardId === card.id) return;
 
     await backupBoard("Before task move", { quiet: true });
-    const targetCards = getCardsForList(targetList.id).filter((item) => !item.archived && item.id !== card.id);
-    let insertIndex = targetCards.length;
-    if (targetCardId) {
-      insertIndex = targetCards.findIndex((item) => item.id === targetCardId);
-      if (insertAfter) insertIndex += 1;
-    }
-    targetCards.splice(Math.max(0, insertIndex), 0, card);
-    await updateCardOrder(targetList.id, targetCards);
+    await moveCardToList(card.id, targetList.id, { targetCardId, insertAfter });
     state.notice = "Task moved.";
   });
 }
@@ -1640,6 +1828,18 @@ function confirmDeleteCard(cardId) {
     copy: `Delete "${card.title}"?`,
     confirmLabel: "Delete Task",
     run: () => deleteCard(card.id),
+  });
+}
+
+function confirmDeleteLabel(tagId) {
+  const tag = state.tags.find((item) => item.id === tagId);
+  if (!tag) return;
+  openModal({
+    type: "confirm",
+    title: "Delete Label",
+    copy: `Delete "${tag.name}" and remove it from every task?`,
+    confirmLabel: "Delete Label",
+    run: () => deleteLabel(tag.id),
   });
 }
 
@@ -1703,6 +1903,11 @@ function hasDuplicateBoardTitle(title, excludingId = "") {
 function hasDuplicateListTitle(title, excludingId = "") {
   const key = normalizeTitle(title);
   return state.lists.some((list) => !list.archived && list.id !== excludingId && normalizeTitle(list.title) === key);
+}
+
+function hasDuplicateTagName(name, excludingId = "") {
+  const key = normalizeTitle(name);
+  return state.tags.some((tag) => tag.id !== excludingId && normalizeTitle(tag.name) === key);
 }
 
 function getListById(listId) {
@@ -1794,6 +1999,11 @@ function makeUniquePlainTitle(title, normalizedExistingTitles) {
 
 function normalizeTitle(title) {
   return String(title || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function normalizeColor(value, fallback) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
 
 function normalizeDueValue(value) {
