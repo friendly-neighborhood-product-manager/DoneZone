@@ -476,6 +476,10 @@ svg {
 }
 
 .status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -483,6 +487,46 @@ svg {
   font-size: 13px;
   font-weight: 700;
   padding: 10px 12px;
+}
+
+.status-message {
+  min-width: 0;
+  flex: 1;
+}
+
+.status-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.status-countdown {
+  font-size: 12px;
+  opacity: 0.78;
+}
+
+.status-close {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  padding: 0;
+}
+
+.status-close:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.status-close svg {
+  width: 14px;
+  height: 14px;
 }
 
 .status-banner.success {
