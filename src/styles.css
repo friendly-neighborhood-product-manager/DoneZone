@@ -759,7 +759,8 @@ svg {
 }
 
 .field span,
-.tag-picker legend {
+.tag-picker legend,
+.tag-picker-title {
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 800;
@@ -769,6 +770,13 @@ svg {
   border: 0;
   margin: 0;
   padding: 0;
+}
+
+.tag-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .tag-options {
@@ -795,6 +803,62 @@ svg {
   width: auto;
   min-height: 0;
   accent-color: var(--tag-color);
+}
+
+.label-create-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 96px auto;
+  align-items: end;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.label-manager-list {
+  display: grid;
+  gap: 10px;
+}
+
+.label-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(180px, 1fr) 96px auto;
+  align-items: end;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 12px;
+}
+
+.label-row-preview {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+}
+
+.label-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.color-field {
+  min-width: 86px;
+}
+
+.color-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.danger-text {
+  color: #b91c1c;
 }
 
 .check-row {
@@ -897,6 +961,15 @@ svg {
   .transfer-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .label-create-form,
+  .label-row {
+    grid-template-columns: 1fr;
+  }
+
+  .label-row-actions {
+    flex-wrap: wrap;
   }
 
   .settings-grid {
