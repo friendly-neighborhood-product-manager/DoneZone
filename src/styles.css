@@ -15,6 +15,10 @@
   --warning: #b45309;
   --warning-bg: #fff7ed;
   --shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+  --card: #ffffff;
+  --hover-surface: #e5edf7;
+  --danger: #b91c1c;
+  --danger-strong: #dc2626;
   --radius-sm: 6px;
   --radius-md: 8px;
   --ease: 180ms ease;
@@ -25,6 +29,29 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111318;
+  --surface: #191c23;
+  --surface-muted: #242936;
+  --ink: #f3f6fb;
+  --ink-soft: #c7ceda;
+  --muted: #9aa3b4;
+  --line: #323949;
+  --accent: #60a5fa;
+  --accent-strong: #3b82f6;
+  --accent-ink: #07111f;
+  --success: #5eead4;
+  --success-bg: #102a27;
+  --warning: #fbbf24;
+  --warning-bg: #2b2114;
+  --shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+  --card: #1f2430;
+  --hover-surface: #303747;
+  --danger: #f87171;
+  --danger-strong: #ef4444;
 }
 
 * {
@@ -327,7 +354,7 @@ svg {
 }
 
 .secondary-button:hover {
-  background: #e5edf7;
+  background: var(--hover-surface);
 }
 
 .ghost-button,
@@ -354,12 +381,12 @@ svg {
 }
 
 .danger-button {
-  background: #dc2626;
+  background: var(--danger-strong);
   color: #fff;
 }
 
 .danger-button:hover {
-  background: #b91c1c;
+  background: var(--danger);
 }
 
 .compact-button {
@@ -423,7 +450,7 @@ svg {
 }
 
 .menu-item.danger {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .board-canvas {
@@ -460,14 +487,15 @@ svg {
 }
 
 .status-banner.error {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  color: var(--danger);
 }
 
 .lists {
   display: flex;
-  min-height: 100%;
+  align-items: flex-start;
+  min-height: 0;
   gap: 16px;
 }
 
@@ -476,6 +504,7 @@ svg {
   width: 320px;
   min-width: 320px;
   max-height: calc(100vh - 126px);
+  align-self: flex-start;
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -557,7 +586,7 @@ svg {
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--card);
   padding: 12px;
 }
 
@@ -567,6 +596,40 @@ svg {
 
 .task-card[draggable="true"]:active {
   cursor: grabbing;
+}
+
+.add-task-card {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed color-mix(in srgb, var(--muted) 52%, var(--line));
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 14px;
+  transition:
+    background var(--ease),
+    border-color var(--ease),
+    color var(--ease);
+}
+
+.add-task-card:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+}
+
+.add-task-card:disabled {
+  cursor: not-allowed;
+}
+
+.add-task-card svg {
+  width: 16px;
+  height: 16px;
 }
 
 .task-card.done {
@@ -607,7 +670,7 @@ svg {
   place-items: center;
   border: 2px solid var(--line);
   border-radius: 50%;
-  background: #fff;
+  background: var(--card);
   color: transparent;
   cursor: pointer;
   padding: 0;
@@ -616,7 +679,7 @@ svg {
 .check-icon.checked {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .check-icon svg {
@@ -640,7 +703,7 @@ svg {
 
 .tag-pill {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tag-color, var(--warning)) 12%, white);
+  background: color-mix(in srgb, var(--tag-color, var(--warning)) 12%, var(--surface));
   color: var(--tag-color, var(--warning));
   font-size: 12px;
   font-weight: 800;
@@ -791,7 +854,7 @@ svg {
   gap: 7px;
   border: 1px solid color-mix(in srgb, var(--tag-color) 28%, var(--line));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tag-color) 10%, white);
+  background: color-mix(in srgb, var(--tag-color) 10%, var(--surface));
   color: var(--tag-color);
   cursor: pointer;
   font-size: 13px;
@@ -858,7 +921,7 @@ svg {
 }
 
 .danger-text {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .check-row {
