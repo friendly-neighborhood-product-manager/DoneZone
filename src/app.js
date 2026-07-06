@@ -60,6 +60,7 @@ const state = {
   backups: [],
   backupSettings: null,
   showArchived: false,
+  tagFilterId: "",
   theme: loadThemePreference(),
   demo: false,
   modal: null,
@@ -169,6 +170,9 @@ async function hydrateData() {
   applyTheme();
 
   state.tags = tagsResult.data || [];
+  if (state.tagFilterId && !state.tags.some((tag) => tag.id === state.tagFilterId)) {
+    state.tagFilterId = "";
+  }
 
   const activeBoardId = appStateResult.data?.active_board_id;
   state.activeBoard =
@@ -433,6 +437,7 @@ function renderApp() {
           <div>
             <h1>${escapeHtml(boardTitle)}</h1>
             <p>${state.demo ? "Demo mode - changes stay in this browser" : isSupabaseConfigured() ? "Saved in Supabase" : "Supabase is not connected"} &middot; ${activeLists.length} lists &middot; ${totals.open} open &middot; ${totals.done} done &middot; ${totals.archived} archived</p>
+            ${renderActiveTagFilter()}
           </div>
           <div class="topbar-actions">
             <button class="action-button" type="button" title="Refresh" data-action="refresh">${svgIcon("refresh")}</button>
@@ -490,7 +495,7 @@ function renderBoardRow(board) {
 }
 
 function renderList(list) {
-  const cards = getCardsForList(list.id).filter((card) => !card.archived);
+  const cards = getVisibleCardsForList(list.id).filter((card) => !card.archived);
   const open = cards.filter((card) => !card.done).length;
   const done = cards.length - open;
   const lockAction = list.locked ? "unlock-list" : "lock-list";
@@ -538,8 +543,13 @@ function renderAddTaskCard(list) {
 }
 
 function renderArchivedColumn() {
-  const archivedLists = state.lists.filter((list) => list.archived);
-  const archivedCards = state.cards.filter((card) => card.archived && !getListById(card.list_id)?.archived);
+  const archivedLists = state.lists.filter((list) => {
+    if (!list.archived) return false;
+    return !state.tagFilterId || getVisibleCardsForList(list.id).length > 0;
+  });
+  const archivedCards = sortCardsByDueDate(
+    state.cards.filter((card) => card.archived && !getListById(card.list_id)?.archived && cardMatchesActiveTagFilter(card)),
+  );
   return `
     <section class="list-column archived-column" data-list-id="archived">
       <header class="list-header">
@@ -566,7 +576,7 @@ function renderArchivedColumn() {
 }
 
 function renderArchivedList(list) {
-  const cards = getCardsForList(list.id);
+  const cards = getVisibleCardsForList(list.id);
   return `
     <div class="archived-group">
       <div class="archived-heading">
@@ -603,7 +613,7 @@ function renderCard(list, card, options = {}) {
           </div>
         </details>
       </div>
-      ${tags.length ? `<div class="tag-row">${tags.map(renderTagPill).join("")}</div>` : ""}
+      ${tags.length ? `<div class="tag-row">${tags.map((tag) => renderTagPill(tag, { clickable: true })).join("")}</div>` : ""}
       ${card.comment ? `<p class="comment-preview">${escapeHtml(card.comment)}</p>` : ""}
       <button class="due-row due-button ${dueClass}" type="button" data-action="open-card-form" data-card-id="${card.id}" data-list-id="${list.id}" title="Edit task due date">
         ${svgIcon("calendar")}${formatDue(card.due_at)}${options.archivedView ? ` · From ${escapeHtml(list.title)}` : ""}
@@ -612,8 +622,35 @@ function renderCard(list, card, options = {}) {
   `;
 }
 
-function renderTagPill(tag) {
-  return `<span class="tag-pill" style="--tag-color: ${escapeAttribute(tag.color || "#b45309")}">${svgIcon("tag")}${escapeHtml(tag.name)}</span>`;
+function renderTagPill(tag, options = {}) {
+  const isActive = state.tagFilterId === tag.id;
+  const className = `tag-pill${options.clickable ? " tag-pill-button" : ""}${isActive ? " active" : ""}`;
+  const style = `--tag-color: ${escapeAttribute(tag.color || "#b45309")}`;
+  const content = `${svgIcon("tag")}${escapeHtml(tag.name)}`;
+
+  if (options.clickable) {
+    return `
+      <button class="${className}" type="button" style="${style}" data-action="apply-tag-filter" data-tag-id="${tag.id}" title="Filter board by ${escapeAttribute(tag.name)}">
+        ${content}
+      </button>
+    `;
+  }
+
+  return `<span class="${className}" style="${style}">${content}</span>`;
+}
+
+function renderActiveTagFilter() {
+  const tag = getActiveTagFilter();
+  if (!tag) return "";
+
+  return `
+    <div class="active-filter" style="--tag-color: ${escapeAttribute(tag.color || "#b45309")}">
+      <span class="active-filter-chip">${svgIcon("tag")}Filtered by ${escapeHtml(tag.name)}</span>
+      <button class="active-filter-clear" type="button" data-action="clear-tag-filter" aria-label="Clear label filter" title="Clear label filter">
+        ${svgIcon("close")}
+      </button>
+    </div>
+  `;
 }
 
 function renderModal() {
@@ -1087,6 +1124,19 @@ async function handleClick(event) {
     return;
   }
 
+  if (action === "apply-tag-filter") {
+    const tagId = button.dataset.tagId || "";
+    state.tagFilterId = state.tagFilterId === tagId ? "" : tagId;
+    render();
+    return;
+  }
+
+  if (action === "clear-tag-filter") {
+    state.tagFilterId = "";
+    render();
+    return;
+  }
+
   if (!state.user) return;
 
   const openActions = {
@@ -1311,6 +1361,7 @@ function enterDemoMode() {
   state.backups = [];
   state.backupSettings = defaultBackupSettings(boardId);
   state.showArchived = false;
+  state.tagFilterId = "";
   state.modal = null;
   state.notice = "Demo mode enabled. Changes stay in this browser.";
   state.error = "";
@@ -1660,6 +1711,7 @@ async function saveBackupSettings(settings) {
 async function switchBoard(boardId) {
   if (!boardId || boardId === state.activeBoard?.id) return;
   state.showArchived = false;
+  state.tagFilterId = "";
   await saveActiveBoard(boardId);
 }
 
@@ -1994,6 +2046,7 @@ async function deleteLabel(tagId) {
   if (state.demo) {
     state.cardTags = state.cardTags.filter((row) => row.tag_id !== tag.id);
     state.tags = state.tags.filter((item) => item.id !== tag.id);
+    if (state.tagFilterId === tag.id) state.tagFilterId = "";
     state.notice = "Label deleted.";
     return;
   }
@@ -2015,6 +2068,7 @@ async function deleteLabel(tagId) {
 
   throwIfSupabaseError(error);
   if (!data?.id) throw new Error("DoneZone could not delete that label.");
+  if (state.tagFilterId === tag.id) state.tagFilterId = "";
   state.notice = "Label deleted.";
 }
 
@@ -2516,6 +2570,7 @@ function clearWorkspaceState() {
   state.backups = [];
   state.backupSettings = null;
   state.showArchived = false;
+  state.tagFilterId = "";
   state.modal = null;
   state.notice = "";
   state.error = "";
@@ -2582,9 +2637,11 @@ function firstWritableList() {
 }
 
 function getCardsForList(listId) {
-  return state.cards
-    .filter((card) => card.list_id === listId)
-    .sort((left, right) => Number(left.sort_order) - Number(right.sort_order));
+  return sortCardsByDueDate(state.cards.filter((card) => card.list_id === listId));
+}
+
+function getVisibleCardsForList(listId) {
+  return getCardsForList(listId).filter(cardMatchesActiveTagFilter);
 }
 
 function getTagIdsForCard(cardId) {
@@ -2599,8 +2656,54 @@ function getTagsForCard(cardId) {
   return state.tags.filter((tag) => tagIds.has(tag.id));
 }
 
+function getActiveTagFilter() {
+  if (!state.tagFilterId) return null;
+  return state.tags.find((tag) => tag.id === state.tagFilterId) || null;
+}
+
+function cardMatchesActiveTagFilter(card) {
+  if (!state.tagFilterId) return true;
+  return getTagIdsForCard(card.id).includes(state.tagFilterId);
+}
+
+function getVisibleBoardCards() {
+  return sortCardsByDueDate(state.cards.filter(cardMatchesActiveTagFilter));
+}
+
+function sortCardsByDueDate(cards) {
+  const now = Date.now();
+  return [...cards].sort((left, right) => compareCardsByDueDate(left, right, now));
+}
+
+function compareCardsByDueDate(left, right, now) {
+  const leftKey = getDueSortKey(left.due_at, now);
+  const rightKey = getDueSortKey(right.due_at, now);
+
+  if (leftKey.bucket !== rightKey.bucket) return leftKey.bucket - rightKey.bucket;
+  if (leftKey.distance !== rightKey.distance) return leftKey.distance - rightKey.distance;
+
+  return Number(left.sort_order) - Number(right.sort_order);
+}
+
+function getDueSortKey(value, now) {
+  if (!value) return { bucket: 2, distance: Number.POSITIVE_INFINITY };
+
+  const dueTime = new Date(value).getTime();
+  if (Number.isNaN(dueTime)) return { bucket: 2, distance: Number.POSITIVE_INFINITY };
+
+  return dueTime < now
+    ? { bucket: 0, distance: now - dueTime }
+    : { bucket: 1, distance: dueTime - now };
+}
+
 function getBoardTotals() {
-  return state.cards.reduce(
+  const visibleCards = getVisibleBoardCards();
+  const archivedLists = state.lists.filter((list) => {
+    if (!list.archived) return false;
+    return !state.tagFilterId || visibleCards.some((card) => card.list_id === list.id);
+  });
+
+  return visibleCards.reduce(
     (totals, card) => {
       if (card.archived) totals.archived += 1;
       else if (card.done) totals.done += 1;
@@ -2610,7 +2713,7 @@ function getBoardTotals() {
     {
       open: 0,
       done: 0,
-      archived: state.lists.filter((list) => list.archived).length,
+      archived: archivedLists.length,
     },
   );
 }
