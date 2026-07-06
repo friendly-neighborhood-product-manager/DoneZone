@@ -68,6 +68,10 @@ const state = {
   error: "",
 };
 
+let noticeCountdownTimer = null;
+let noticeCountdownMessage = "";
+let noticeCountdownExpiresAt = 0;
+
 applyTheme();
 
 appRoot.addEventListener("submit", handleSubmit);
@@ -107,6 +111,7 @@ async function init() {
   state.user = state.session?.user || null;
 
   if (state.user) {
+    state.notice = "";
     await hydrateData();
   }
 
@@ -119,6 +124,7 @@ async function init() {
     state.error = "";
 
     if (state.user) {
+      state.notice = "";
       state.loading = true;
       render();
       await hydrateData();
@@ -901,14 +907,109 @@ function renderDialog(title, body, extraClass = "") {
 
 function renderStatus() {
   if (!state.notice && !state.error && !state.busy) return "";
+  syncNoticeAutoClose();
 
   return `
     <div class="status-stack" aria-live="polite">
-      ${state.busy ? '<div class="status-banner">Saving...</div>' : ""}
-      ${state.notice ? `<div class="status-banner success">${escapeHtml(state.notice)}</div>` : ""}
-      ${state.error ? `<div class="status-banner error">${escapeHtml(state.error)}</div>` : ""}
+      ${state.busy ? '<div class="status-banner"><span class="status-message">Saving...</span></div>' : ""}
+      ${
+        state.notice
+          ? `<div class="status-banner success" role="status" data-status-notice>
+              <span class="status-message">${escapeHtml(state.notice)}</span>
+              <span class="status-actions">
+                <span class="status-countdown" data-status-countdown>${escapeHtml(getNoticeCountdownLabel())}</span>
+                <button class="status-close" type="button" data-action="close-notice" aria-label="Close message" title="Close">${svgIcon("close")}</button>
+              </span>
+            </div>`
+          : ""
+      }
+      ${
+        state.error
+          ? `<div class="status-banner error" role="alert" data-status-error>
+              <span class="status-message">${escapeHtml(state.error)}</span>
+              <button class="status-close" type="button" data-action="close-error" aria-label="Close message" title="Close">${svgIcon("close")}</button>
+            </div>`
+          : ""
+      }
     </div>
   `;
+}
+
+function syncNoticeAutoClose() {
+  if (!state.notice) {
+    stopNoticeAutoClose();
+    return;
+  }
+
+  if (noticeCountdownMessage === state.notice && noticeCountdownExpiresAt > Date.now()) {
+    updateNoticeCountdownLabel();
+    return;
+  }
+
+  noticeCountdownMessage = state.notice;
+  noticeCountdownExpiresAt = Date.now() + 5000;
+  if (noticeCountdownTimer) {
+    window.clearInterval(noticeCountdownTimer);
+  }
+  noticeCountdownTimer = window.setInterval(handleNoticeCountdownTick, 250);
+}
+
+function handleNoticeCountdownTick() {
+  if (!state.notice) {
+    stopNoticeAutoClose();
+    return;
+  }
+
+  if (Date.now() >= noticeCountdownExpiresAt) {
+    dismissNotice();
+    return;
+  }
+
+  updateNoticeCountdownLabel();
+}
+
+function updateNoticeCountdownLabel() {
+  const label = getNoticeCountdownLabel();
+  document.querySelectorAll("[data-status-countdown]").forEach((item) => {
+    item.textContent = label;
+  });
+}
+
+function getNoticeCountdownLabel() {
+  const seconds = noticeCountdownExpiresAt
+    ? Math.max(1, Math.ceil((noticeCountdownExpiresAt - Date.now()) / 1000))
+    : 5;
+  return `Closes in ${seconds}s`;
+}
+
+function dismissNotice() {
+  state.notice = "";
+  stopNoticeAutoClose();
+  removeStatusBanner("[data-status-notice]");
+}
+
+function dismissError() {
+  state.error = "";
+  removeStatusBanner("[data-status-error]");
+}
+
+function removeStatusBanner(selector) {
+  document.querySelectorAll(selector).forEach((banner) => {
+    const stack = banner.closest(".status-stack");
+    banner.remove();
+    if (stack && !stack.children.length) {
+      stack.remove();
+    }
+  });
+}
+
+function stopNoticeAutoClose() {
+  if (noticeCountdownTimer) {
+    window.clearInterval(noticeCountdownTimer);
+    noticeCountdownTimer = null;
+  }
+  noticeCountdownMessage = "";
+  noticeCountdownExpiresAt = 0;
 }
 
 async function handleSubmit(event) {
@@ -941,9 +1042,21 @@ async function handleSubmit(event) {
 
 async function handleClick(event) {
   const button = event.target.closest("[data-action]");
-  if (!button || state.busy) return;
+  if (!button) return;
 
   const action = button.dataset.action;
+
+  if (action === "close-notice") {
+    dismissNotice();
+    return;
+  }
+
+  if (action === "close-error") {
+    dismissError();
+    return;
+  }
+
+  if (state.busy) return;
 
   if (action === "modal-backdrop" && event.target !== button) return;
 
