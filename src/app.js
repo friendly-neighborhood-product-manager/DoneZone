@@ -349,8 +349,8 @@ function renderLoading() {
       <section class="auth-panel" aria-live="polite">
         <img class="auth-logo" src="public/donezone-logo.svg" alt="" />
         <h1>DoneZone</h1>
-        <p>Built by Khizer</p>
         <p>Loading your workspace...</p>
+        <p class="auth-note auth-credit">Built by Khizer</p>
       </section>
     </main>
   `;
@@ -362,7 +362,6 @@ function renderAuth() {
       <section class="auth-panel">
         <img class="auth-logo" src="public/donezone-logo.svg" alt="" />
         <h1>DoneZone</h1>
-        <p>Built by Khizer</p>
         <p>Sign in with your email to open your task board.</p>
         ${renderStatus()}
         <form id="magic-link-form" class="auth-form">
@@ -376,6 +375,7 @@ function renderAuth() {
           ${svgIcon("play")}Try Demo Mode
         </button>
         <p class="auth-note">Sign-in links open the hosted GitHub Pages app.</p>
+        <p class="auth-note auth-credit">Built by Khizer</p>
       </section>
     </main>
   `;
@@ -2651,8 +2651,4 @@ function escapeAttribute(value) {
 
 function svgIcon(name) {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      ${icons[name] || ""}
-    </svg>
-  `;
-}
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-lin
