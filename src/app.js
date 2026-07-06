@@ -59,6 +59,7 @@ const state = {
   backupSettings: null,
   showArchived: false,
   theme: loadThemePreference(),
+  demo: false,
   modal: null,
   drag: null,
   notice: "",
@@ -313,6 +314,11 @@ async function ensureDefaultTags() {
 }
 
 async function saveActiveBoard(boardId) {
+  if (state.demo) {
+    state.activeBoard = state.boards.find((board) => board.id === boardId) || state.activeBoard;
+    return;
+  }
+
   const { error } = await supabase.from("app_state").upsert({
     user_id: state.user.id,
     active_board_id: boardId,
@@ -363,6 +369,9 @@ function renderAuth() {
             ${state.authSending ? "Sending..." : "Send sign-in link"}
           </button>
         </form>
+        <button class="secondary-button wide" type="button" data-action="enter-demo">
+          ${svgIcon("move")}Try Demo Mode
+        </button>
         <p class="auth-note">Sign-in links open the hosted GitHub Pages app.</p>
       </section>
     </main>
@@ -405,13 +414,11 @@ function renderApp() {
         <header class="topbar">
           <div>
             <h1>${escapeHtml(boardTitle)}</h1>
-            <p>${isSupabaseConfigured() ? "Saved in Supabase" : "Supabase is not connected"} &middot; ${activeLists.length} lists &middot; ${totals.open} open &middot; ${totals.done} done &middot; ${totals.archived} archived</p>
+            <p>${state.demo ? "Demo mode - changes stay in this browser" : isSupabaseConfigured() ? "Saved in Supabase" : "Supabase is not connected"} &middot; ${activeLists.length} lists &middot; ${totals.open} open &middot; ${totals.done} done &middot; ${totals.archived} archived</p>
           </div>
           <div class="topbar-actions">
             <button class="action-button" type="button" title="Refresh" data-action="refresh">${svgIcon("refresh")}</button>
             <button class="action-button ${state.showArchived ? "active" : ""}" type="button" title="${state.showArchived ? "Hide archived" : "Show archived"}" data-action="toggle-archived">${svgIcon("archive")}</button>
-            <button class="action-button" type="button" title="Back up board" data-action="backup">${svgIcon("backup")}</button>
-            <button class="action-button" type="button" title="Manage labels" data-action="open-labels">${svgIcon("tag")}</button>
             <button class="action-button" type="button" title="${state.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}" data-action="toggle-theme">${svgIcon(state.theme === "dark" ? "sun" : "moon")}</button>
             <details class="menu-wrap board-menu">
               <summary class="action-button menu-trigger" title="Board options" aria-label="Board options">${svgIcon("more")}</summary>
@@ -928,7 +935,16 @@ async function handleClick(event) {
 
   if (action === "modal-backdrop" && event.target !== button) return;
 
+  if (action === "enter-demo") {
+    enterDemoMode();
+    return;
+  }
+
   if (action === "sign-out") {
+    if (state.demo) {
+      exitDemoMode();
+      return;
+    }
     await supabase.auth.signOut();
     return;
   }
@@ -1052,6 +1068,125 @@ async function sendMagicLink(form) {
   renderAuth();
 }
 
+function enterDemoMode() {
+  const userId = "demo-user";
+  const boardId = "demo-board";
+  const nextListId = "demo-list-next";
+  const doingListId = "demo-list-doing";
+  const doneListId = "demo-list-done";
+  const taskTagId = "demo-tag-task";
+  const focusTagId = "demo-tag-focus";
+  const launchTagId = "demo-tag-launch";
+
+  state.demo = true;
+  state.loading = false;
+  state.session = { user: { id: userId, email: "demo@donezone.app" } };
+  state.user = state.session.user;
+  state.boards = [
+    {
+      id: boardId,
+      user_id: userId,
+      title: "DoneZone Demo",
+      sort_order: 0,
+    },
+  ];
+  state.activeBoard = state.boards[0];
+  state.lists = [
+    {
+      id: nextListId,
+      user_id: userId,
+      board_id: boardId,
+      title: "Next",
+      archived: false,
+      locked: false,
+      sort_order: 0,
+    },
+    {
+      id: doingListId,
+      user_id: userId,
+      board_id: boardId,
+      title: "Doing",
+      archived: false,
+      locked: false,
+      sort_order: 1,
+    },
+    {
+      id: doneListId,
+      user_id: userId,
+      board_id: boardId,
+      title: "Done",
+      archived: false,
+      locked: false,
+      sort_order: 2,
+    },
+  ];
+  state.cards = [
+    {
+      id: "demo-card-1",
+      user_id: userId,
+      board_id: boardId,
+      list_id: nextListId,
+      title: "Plan your first DoneZone board",
+      comment: "Try opening this task, editing labels, or dragging it to another list.",
+      due_at: null,
+      done: false,
+      archived: false,
+      sort_order: 0,
+    },
+    {
+      id: "demo-card-2",
+      user_id: userId,
+      board_id: boardId,
+      list_id: nextListId,
+      title: "Create labels for priorities",
+      comment: "",
+      due_at: null,
+      done: false,
+      archived: false,
+      sort_order: 1,
+    },
+    {
+      id: "demo-card-3",
+      user_id: userId,
+      board_id: boardId,
+      list_id: doingListId,
+      title: "Move cards by dragging anywhere into a list",
+      comment: "",
+      due_at: null,
+      done: false,
+      archived: false,
+      sort_order: 0,
+    },
+  ];
+  state.tags = [
+    { id: taskTagId, user_id: userId, name: "Task", color: "#b45309", sort_order: 0 },
+    { id: focusTagId, user_id: userId, name: "Focus", color: "#2563eb", sort_order: 1 },
+    { id: launchTagId, user_id: userId, name: "Launch", color: "#16a34a", sort_order: 2 },
+  ];
+  state.cardTags = [
+    { user_id: userId, card_id: "demo-card-1", tag_id: taskTagId, sort_order: 0 },
+    { user_id: userId, card_id: "demo-card-2", tag_id: focusTagId, sort_order: 0 },
+    { user_id: userId, card_id: "demo-card-3", tag_id: launchTagId, sort_order: 0 },
+  ];
+  state.backups = [];
+  state.backupSettings = defaultBackupSettings(boardId);
+  state.showArchived = false;
+  state.modal = null;
+  state.notice = "Demo mode enabled. Changes stay in this browser.";
+  state.error = "";
+  render();
+}
+
+function exitDemoMode() {
+  state.demo = false;
+  clearWorkspaceState();
+  state.session = null;
+  state.user = null;
+  state.notice = "";
+  state.error = "";
+  renderAuth();
+}
+
 async function runAction(action) {
   state.busy = true;
   state.error = "";
@@ -1060,7 +1195,9 @@ async function runAction(action) {
 
   try {
     await action();
-    await hydrateData();
+    if (!state.demo) {
+      await hydrateData();
+    }
   } catch (error) {
     state.error = getErrorMessage(error);
   } finally {
@@ -1075,6 +1212,38 @@ async function submitBoardForm(formData) {
   if (!title) throw new Error("Board name is required.");
   if (hasDuplicateBoardTitle(title, boardId)) {
     throw new Error(`A board named "${title}" already exists.`);
+  }
+
+  if (state.demo) {
+    if (boardId) {
+      const board = state.boards.find((item) => item.id === boardId);
+      if (!board) throw new Error("Board not found.");
+      board.title = title;
+      state.notice = "Board renamed.";
+    } else {
+      const newBoard = {
+        id: demoId("board"),
+        user_id: state.user.id,
+        title,
+        sort_order: getNextSortOrder(state.boards),
+      };
+      state.boards.push(newBoard);
+      state.activeBoard = newBoard;
+      starterLists.forEach((listTitle, index) => {
+        state.lists.push({
+          id: demoId("list"),
+          user_id: state.user.id,
+          board_id: newBoard.id,
+          title: listTitle,
+          archived: false,
+          locked: false,
+          sort_order: index,
+        });
+      });
+      state.notice = "Board created.";
+    }
+    closeModal(false);
+    return;
   }
 
   if (boardId) {
@@ -1123,6 +1292,28 @@ async function submitListForm(formData) {
 
   await backupBoard("Before list change", { quiet: true });
 
+  if (state.demo) {
+    if (listId) {
+      const list = getListById(listId);
+      if (!list) throw new Error("List not found.");
+      list.title = title;
+      state.notice = "List renamed.";
+    } else {
+      state.lists.push({
+        id: demoId("list"),
+        user_id: state.user.id,
+        board_id: state.activeBoard.id,
+        title,
+        archived: false,
+        locked: false,
+        sort_order: getNextSortOrder(state.lists),
+      });
+      state.notice = "List created.";
+    }
+    closeModal(false);
+    return;
+  }
+
   if (listId) {
     const { error } = await supabase.from("lists").update({ title }).eq("id", listId);
     throwIfSupabaseError(error);
@@ -1161,6 +1352,39 @@ async function submitCardForm(formData) {
     due_at: normalizeDueValue(formData.get("dueAt")),
     done: formData.get("done") === "on",
   };
+
+  if (state.demo) {
+    let savedCardId = cardId;
+    if (cardId) {
+      const existingCard = state.cards.find((card) => card.id === cardId);
+      if (!existingCard) throw new Error("Task not found.");
+      Object.assign(existingCard, {
+        title: cardPayload.title,
+        comment: cardPayload.comment,
+        due_at: cardPayload.due_at,
+        done: cardPayload.done,
+      });
+      if (existingCard.list_id !== listId) {
+        await moveCardToList(cardId, listId);
+      }
+      state.notice = "Task updated.";
+    } else {
+      savedCardId = demoId("card");
+      state.cards.push({
+        ...cardPayload,
+        id: savedCardId,
+        user_id: state.user.id,
+        board_id: state.activeBoard.id,
+        archived: false,
+        sort_order: getNextSortOrder(getCardsForList(listId)),
+      });
+      state.notice = "Task created.";
+    }
+
+    await replaceCardTags(savedCardId, formData.getAll("tagIds"));
+    closeModal(false);
+    return;
+  }
 
   let savedCardId = cardId;
   if (cardId) {
@@ -1210,6 +1434,18 @@ async function submitLabelCreate(formData) {
     throw new Error(`A label named "${name}" already exists.`);
   }
 
+  if (state.demo) {
+    state.tags.push({
+      id: demoId("tag"),
+      user_id: state.user.id,
+      name,
+      color,
+      sort_order: getNextSortOrder(state.tags),
+    });
+    state.notice = "Label created.";
+    return;
+  }
+
   const { data, error } = await supabase
     .from("tags")
     .insert({
@@ -1235,6 +1471,12 @@ async function submitLabelUpdate(formData) {
   if (!name) throw new Error("Label name is required.");
   if (hasDuplicateTagName(name, tagId)) {
     throw new Error(`A label named "${name}" already exists.`);
+  }
+
+  if (state.demo) {
+    Object.assign(tag, { name, color });
+    state.notice = "Label updated.";
+    return;
   }
 
   const { data, error } = await supabase
@@ -1266,6 +1508,11 @@ async function submitBackupSettings(formData) {
 }
 
 async function saveBackupSettings(settings) {
+  if (state.demo) {
+    state.backupSettings = { ...settings };
+    return;
+  }
+
   const { error } = await supabase.from("board_backup_settings").upsert(settings);
   throwIfSupabaseError(error);
 }
@@ -1280,6 +1527,11 @@ async function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
   saveThemePreference(state.theme);
   applyTheme();
+
+  if (state.demo) {
+    state.notice = state.theme === "dark" ? "Dark mode enabled." : "Light mode enabled.";
+    return;
+  }
 
   const { error } = await supabase.from("app_state").upsert({
     user_id: state.user.id,
@@ -1296,6 +1548,12 @@ async function toggleCard(cardId) {
   if (!card) return;
 
   await backupBoard("Before task completion change", { quiet: true });
+  if (state.demo) {
+    card.done = !card.done;
+    state.notice = card.done ? "Task marked done." : "Task reopened.";
+    return;
+  }
+
   const { error } = await supabase
     .from("cards")
     .update({ done: !card.done })
@@ -1309,6 +1567,12 @@ async function toggleArchiveCard(cardId) {
   if (!card) return;
 
   await backupBoard("Before task archive change", { quiet: true });
+  if (state.demo) {
+    card.archived = !card.archived;
+    state.notice = card.archived ? "Task archived." : "Task restored.";
+    return;
+  }
+
   const { error } = await supabase
     .from("cards")
     .update({ archived: !card.archived })
@@ -1322,6 +1586,20 @@ async function duplicateCard(cardId) {
   if (!card) return;
 
   await backupBoard("Before task duplication", { quiet: true });
+  if (state.demo) {
+    const newCardId = demoId("card");
+    state.cards.push({
+      ...card,
+      id: newCardId,
+      title: duplicateTitle(card.title, getCardsForList(card.list_id).map((item) => item.title)),
+      archived: false,
+      sort_order: getNextSortOrder(getCardsForList(card.list_id)),
+    });
+    await replaceCardTags(newCardId, getTagIdsForCard(card.id));
+    state.notice = "Task duplicated.";
+    return;
+  }
+
   const { data, error } = await supabase
     .from("cards")
     .insert({
@@ -1352,6 +1630,22 @@ async function transferCard(targetListId) {
   await backupBoard(modal.mode === "copy" ? "Before task copy" : "Before task move", { quiet: true });
 
   if (modal.mode === "copy") {
+    if (state.demo) {
+      const newCardId = demoId("card");
+      state.cards.push({
+        ...card,
+        id: newCardId,
+        list_id: targetList.id,
+        title: duplicateTitle(card.title, getCardsForList(targetList.id).map((item) => item.title)),
+        archived: false,
+        sort_order: getNextSortOrder(getCardsForList(targetList.id)),
+      });
+      await replaceCardTags(newCardId, getTagIdsForCard(card.id));
+      state.notice = "Task copied.";
+      closeModal(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("cards")
       .insert({
@@ -1383,6 +1677,42 @@ async function duplicateList(listId, options) {
   if (!sourceList || !state.activeBoard) return;
 
   await backupBoard(options.includeCards ? "Before duplicating list with tasks" : "Before list duplication", { quiet: true });
+  if (state.demo) {
+    const newList = {
+      ...sourceList,
+      id: demoId("list"),
+      title: duplicateTitle(sourceList.title, state.lists.map((list) => list.title)),
+      archived: false,
+      locked: false,
+      sort_order: sourceList.sort_order + 1,
+    };
+    state.lists.push(newList);
+
+    if (options.includeCards) {
+      const sourceCards = getCardsForList(sourceList.id);
+      sourceCards.forEach((card, index) => {
+        const newCardId = demoId("card");
+        state.cards.push({
+          ...card,
+          id: newCardId,
+          list_id: newList.id,
+          sort_order: index,
+        });
+        state.cardTags
+          .filter((row) => row.card_id === card.id)
+          .forEach((row) => {
+            state.cardTags.push({
+              ...row,
+              card_id: newCardId,
+            });
+          });
+      });
+    }
+
+    state.notice = options.includeCards ? "List duplicated with tasks." : "List duplicated.";
+    return;
+  }
+
   const { data: newList, error } = await supabase
     .from("lists")
     .insert({
@@ -1428,6 +1758,12 @@ async function setListLocked(listId, locked) {
   if (!list) return;
 
   await backupBoard(locked ? "Before locking list" : "Before unlocking list", { quiet: true });
+  if (state.demo) {
+    list.locked = locked;
+    state.notice = locked ? "List locked." : "List unlocked.";
+    return;
+  }
+
   const { error } = await supabase.from("lists").update({ locked }).eq("id", listId);
   throwIfSupabaseError(error);
   state.notice = locked ? "List locked." : "List unlocked.";
@@ -1442,6 +1778,12 @@ async function setListArchived(listId, archived) {
   if (!list) return;
 
   await backupBoard(archived ? "Before list archive" : "Before list restore", { quiet: true });
+  if (state.demo) {
+    list.archived = archived;
+    state.notice = archived ? "List archived." : "List restored.";
+    return;
+  }
+
   const { error } = await supabase.from("lists").update({ archived }).eq("id", listId);
   throwIfSupabaseError(error);
   state.notice = archived ? "List archived." : "List restored.";
@@ -1451,6 +1793,17 @@ async function deleteBoard(boardId) {
   const board = state.boards.find((item) => item.id === boardId);
   if (!board) return;
   await backupBoard("Before board deletion", { quiet: true, force: true });
+  if (state.demo) {
+    state.boards = state.boards.filter((item) => item.id !== boardId);
+    state.lists = state.lists.filter((item) => item.board_id !== boardId);
+    state.cards = state.cards.filter((item) => item.board_id !== boardId);
+    const cardIds = new Set(state.cards.map((card) => card.id));
+    state.cardTags = state.cardTags.filter((row) => cardIds.has(row.card_id));
+    state.activeBoard = state.boards[0] || null;
+    state.notice = "Board deleted.";
+    return;
+  }
+
   const { error } = await supabase.from("boards").delete().eq("id", boardId);
   throwIfSupabaseError(error);
 
@@ -1463,6 +1816,15 @@ async function deleteList(listId) {
   const list = getListById(listId);
   if (!list) return;
   await backupBoard("Before list deletion", { quiet: true, force: true });
+  if (state.demo) {
+    const removedCardIds = new Set(getCardsForList(listId).map((card) => card.id));
+    state.lists = state.lists.filter((item) => item.id !== listId);
+    state.cards = state.cards.filter((card) => card.list_id !== listId);
+    state.cardTags = state.cardTags.filter((row) => !removedCardIds.has(row.card_id));
+    state.notice = "List deleted.";
+    return;
+  }
+
   const { error } = await supabase.from("lists").delete().eq("id", listId);
   throwIfSupabaseError(error);
   state.notice = "List deleted.";
@@ -1472,6 +1834,13 @@ async function deleteCard(cardId) {
   const card = state.cards.find((item) => item.id === cardId);
   if (!card) return;
   await backupBoard("Before task deletion", { quiet: true, force: true });
+  if (state.demo) {
+    state.cards = state.cards.filter((item) => item.id !== cardId);
+    state.cardTags = state.cardTags.filter((row) => row.card_id !== cardId);
+    state.notice = "Task deleted.";
+    return;
+  }
+
   const { error } = await supabase.from("cards").delete().eq("id", cardId);
   throwIfSupabaseError(error);
   state.notice = "Task deleted.";
@@ -1482,6 +1851,13 @@ async function deleteLabel(tagId) {
   if (!tag) return;
 
   await backupBoard("Before label deletion", { quiet: true, force: true });
+  if (state.demo) {
+    state.cardTags = state.cardTags.filter((row) => row.tag_id !== tag.id);
+    state.tags = state.tags.filter((item) => item.id !== tag.id);
+    state.notice = "Label deleted.";
+    return;
+  }
+
   const { error: cardTagError } = await supabase
     .from("card_tags")
     .delete()
@@ -1513,6 +1889,22 @@ async function backupBoard(reason = "Manual backup", options = {}) {
     tags: state.tags,
     cardTags: state.cardTags,
   };
+
+  if (state.demo) {
+    state.backups.unshift({
+      id: demoId("backup"),
+      user_id: state.user.id,
+      board_id: state.activeBoard.id,
+      board_title: state.activeBoard.title,
+      reason,
+      snapshot: JSON.parse(JSON.stringify(snapshot)),
+      snapshot_hash: `demo:${Date.now()}`,
+      created_at: new Date().toISOString(),
+    });
+    if (!options.quiet) state.notice = "Board backup saved.";
+    return;
+  }
+
   const snapshotText = JSON.stringify(snapshot);
   const hash = await hashText(snapshotText);
 
@@ -1545,6 +1937,45 @@ async function restoreBackup(backupId) {
   const cards = Array.isArray(snapshot.cards) ? snapshot.cards : [];
   const cardTags = Array.isArray(snapshot.cardTags) ? snapshot.cardTags : [];
   const title = snapshot.board?.title || state.activeBoard.title;
+
+  if (state.demo) {
+    state.activeBoard.title = title;
+    state.boards = state.boards.map((board) =>
+      board.id === state.activeBoard.id ? { ...board, title } : board,
+    );
+    state.lists = lists.map((list, index) => ({
+      ...list,
+      user_id: state.user.id,
+      board_id: state.activeBoard.id,
+      title: list.title || `List ${index + 1}`,
+      archived: Boolean(list.archived),
+      locked: Boolean(list.locked),
+      sort_order: Number(list.sort_order) || index,
+    }));
+    state.cards = cards.map((card, index) => ({
+      ...card,
+      user_id: state.user.id,
+      board_id: state.activeBoard.id,
+      title: card.title || `Task ${index + 1}`,
+      comment: card.comment || "",
+      due_at: card.due_at || null,
+      done: Boolean(card.done),
+      archived: Boolean(card.archived),
+      sort_order: Number(card.sort_order) || index,
+    }));
+    const validCardIds = new Set(state.cards.map((card) => card.id));
+    const validTagIds = new Set(state.tags.map((tag) => tag.id));
+    state.cardTags = cardTags
+      .filter((row) => validCardIds.has(row.card_id) && validTagIds.has(row.tag_id))
+      .map((row, index) => ({
+        ...row,
+        user_id: state.user.id,
+        sort_order: Number(row.sort_order) || index,
+      }));
+    closeModal(false);
+    state.notice = "Board restored from backup.";
+    return;
+  }
 
   const { error: deleteCardsError } = await supabase
     .from("cards")
@@ -1623,6 +2054,19 @@ async function restoreBackup(backupId) {
 
 async function replaceCardTags(cardId, tagIds) {
   const normalizedTagIds = [...new Set(tagIds.map(String).filter(Boolean))];
+  if (state.demo) {
+    state.cardTags = state.cardTags.filter((row) => row.card_id !== cardId);
+    state.cardTags.push(
+      ...normalizedTagIds.map((tagId, index) => ({
+        user_id: state.user.id,
+        card_id: cardId,
+        tag_id: tagId,
+        sort_order: index,
+      })),
+    );
+    return;
+  }
+
   const { error: deleteError } = await supabase.from("card_tags").delete().eq("card_id", cardId);
   throwIfSupabaseError(deleteError);
 
@@ -1640,6 +2084,14 @@ async function replaceCardTags(cardId, tagIds) {
 }
 
 async function updateListOrder(orderedLists) {
+  if (state.demo) {
+    orderedLists.forEach((orderedList, index) => {
+      const list = state.lists.find((item) => item.id === orderedList.id);
+      if (list) list.sort_order = index;
+    });
+    return;
+  }
+
   const results = await Promise.all(
     orderedLists.map((list, index) =>
       supabase.from("lists").update({ sort_order: index }).eq("id", list.id),
@@ -1649,6 +2101,18 @@ async function updateListOrder(orderedLists) {
 }
 
 async function updateCardOrder(listId, orderedCards) {
+  if (state.demo) {
+    orderedCards.forEach((orderedCard, index) => {
+      const card = state.cards.find((item) => item.id === orderedCard.id);
+      if (card) {
+        card.list_id = listId;
+        card.sort_order = index;
+        card.archived = false;
+      }
+    });
+    return;
+  }
+
   const results = await Promise.all(
     orderedCards.map((card, index) =>
       supabase
@@ -2084,7 +2548,9 @@ function saveThemePreference(theme) {
 }
 
 function applyTheme() {
-  document.documentElement.dataset.theme = normalizeTheme(state.theme);
+  const theme = normalizeTheme(state.theme);
+  document.documentElement.dataset.theme = theme;
+  document.body.dataset.theme = theme;
 }
 
 function normalizeDueValue(value) {
