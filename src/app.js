@@ -1,5 +1,6 @@
 import {
   getAuthRedirectTo,
+  initSupabaseClient,
   isSupabaseConfigured,
   supabase,
 } from "./supabaseClient.js";
@@ -90,6 +91,14 @@ init();
 
 async function init() {
   renderLoading();
+
+  const { error: supabaseLoadError } = await initSupabaseClient();
+  if (supabaseLoadError || !supabase) {
+    state.loading = false;
+    state.error = "Sign-in service could not load. You can still try Demo Mode.";
+    render();
+    return;
+  }
 
   const { data, error } = await supabase.auth.getSession();
   if (error) state.error = error.message;
@@ -948,6 +957,11 @@ async function handleClick(event) {
       exitDemoMode();
       return;
     }
+    if (!supabase) {
+      state.error = "Sign-in service is not available. Please refresh and try again.";
+      render();
+      return;
+    }
     await supabase.auth.signOut();
     return;
   }
@@ -1056,6 +1070,13 @@ async function sendMagicLink(form) {
   state.notice = "";
   state.error = "";
   renderAuth();
+
+  if (!supabase) {
+    state.authSending = false;
+    state.error = "Sign-in service is not available. Please refresh and try again.";
+    renderAuth();
+    return;
+  }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -2651,4 +2672,8 @@ function escapeAttribute(value) {
 
 function svgIcon(name) {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-lin
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      ${icons[name] || ""}
+    </svg>
+  `;
+}
