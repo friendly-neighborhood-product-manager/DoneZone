@@ -31,7 +31,8 @@
     sans-serif;
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+body[data-theme="dark"] {
   color-scheme: dark;
   --bg: #111318;
   --surface: #191c23;
@@ -495,6 +496,7 @@ svg {
 .lists {
   display: flex;
   align-items: flex-start;
+  align-content: flex-start;
   min-height: 0;
   gap: 16px;
 }
@@ -503,8 +505,11 @@ svg {
   display: flex;
   width: 320px;
   min-width: 320px;
+  height: fit-content;
+  min-height: 0;
   max-height: calc(100vh - 126px);
   align-self: flex-start;
+  flex: 0 0 320px;
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -577,6 +582,7 @@ svg {
 .cards {
   display: grid;
   gap: 10px;
+  flex: 0 0 auto;
   overflow: visible;
   padding: 12px;
 }
@@ -599,18 +605,23 @@ svg {
 }
 
 .add-task-card {
-  display: flex;
-  min-height: 66px;
+  display: grid;
+  width: 100%;
+  min-height: 72px;
   align-items: center;
+  align-content: center;
   justify-content: center;
+  justify-items: center;
   gap: 8px;
-  border: 1px dashed color-mix(in srgb, var(--muted) 52%, var(--line));
+  grid-auto-flow: column;
+  border: 1px dashed color-mix(in srgb, var(--muted) 62%, var(--line));
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--ink-soft);
   cursor: pointer;
   font-weight: 700;
   padding: 14px;
+  text-align: center;
   transition:
     background var(--ease),
     border-color var(--ease),
