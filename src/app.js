@@ -605,7 +605,9 @@ function renderCard(list, card, options = {}) {
       </div>
       ${tags.length ? `<div class="tag-row">${tags.map(renderTagPill).join("")}</div>` : ""}
       ${card.comment ? `<p class="comment-preview">${escapeHtml(card.comment)}</p>` : ""}
-      <div class="due-row ${dueClass}">${svgIcon("calendar")}${formatDue(card.due_at)}${options.archivedView ? ` · From ${escapeHtml(list.title)}` : ""}</div>
+      <button class="due-row due-button ${dueClass}" type="button" data-action="open-card-form" data-card-id="${card.id}" data-list-id="${list.id}" title="Edit task due date">
+        ${svgIcon("calendar")}${formatDue(card.due_at)}${options.archivedView ? ` · From ${escapeHtml(list.title)}` : ""}
+      </button>
     </article>
   `;
 }
