@@ -1,6 +1,6 @@
 # DoneZone Architecture
 
-DoneZone is a static task-board app hosted on GitHub Pages with Supabase Auth and Supabase Postgres as the hosted backend. It is intentionally simple: the browser owns the UI, Supabase owns authenticated data, and demo mode stays local to the browser.
+DoneZone is a static task-board app hosted on GitHub Pages with Supabase Auth and Supabase Postgres as the hosted backend. It is intentionally simple: the browser owns the UI, Supabase owns authenticated data, and demo mode stays in browser memory.
 
 ## Architecture Diagram
 
@@ -45,7 +45,7 @@ DoneZone is deployed as static files from the GitHub repository:
 https://friendly-neighborhood-product-manager.github.io/DoneZone/
 ```
 
-There is no Node server, Python server, local workbook backend, or build step required for production. GitHub Pages serves the files directly, and the browser talks to Supabase through the public Supabase JavaScript client.
+There is no production server or build step required. GitHub Pages serves the files directly, and the browser talks to Supabase through the public Supabase JavaScript client.
 
 ## Authentication Flow
 
@@ -96,7 +96,7 @@ All user-owned tables include `user_id`, and row-level security policies restric
 
 ### Demo Mode
 
-Demo mode creates a local sample board in browser memory. It does not require Supabase Auth and does not write to Supabase. It is meant for quick product exploration before sign-in.
+Demo mode creates a sample board in browser memory. It does not require Supabase Auth and does not write to Supabase. It is meant for quick product exploration before sign-in.
 
 ## Security Notes
 
@@ -112,5 +112,5 @@ Browser
   -> GitHub Pages static app
   -> Supabase Auth for sign-in
   -> Supabase Postgres for persisted task data
-  -> Local browser memory for demo mode only
+  -> Browser memory for demo mode only
 ```
