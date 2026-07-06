@@ -2297,6 +2297,8 @@ async function moveCardToList(cardId, targetListId, options = {}) {
     await updateCardOrder(targetList.id, targetCards);
   }
 
+  if (state.demo) return;
+
   const { data, error } = await supabase
     .from("cards")
     .select("id, list_id")
@@ -2627,6 +2629,13 @@ function getNextSortOrder(items) {
   return items.length
     ? Math.max(...items.map((item) => Number(item.sort_order) || 0)) + 1
     : 0;
+}
+
+function demoId(type) {
+  const randomValue =
+    window.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `demo-${type}-${randomValue}`;
 }
 
 function duplicateTitle(title, existingTitles) {
