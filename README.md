@@ -30,28 +30,52 @@ DoneZone/
 
 ## Local Preview
 
+This is only for checking the files on your own machine. Do not add this
+localhost URL to Supabase Auth settings when the app should authenticate only
+from GitHub Pages.
+
 From this folder:
 
 ```bash
-python3 -m http.server 5173
+python3 -m http.server 7777
 ```
 
 Then open:
 
 ```text
-http://localhost:5173/
+http://localhost:7777/
 ```
 
 ## Supabase Notes
 
-The browser app should use only the Supabase project URL and anon public key.
-Never commit a `service_role` key or database password.
+The browser app uses only the Supabase project URL and publishable public key.
+Never commit a `service_role` key, database password, or Postgres connection
+string.
+
+Supabase Auth should use the GitHub Pages URL only:
+
+- Site URL: `https://friendly-neighborhood-product-manager.github.io/DoneZone/`
+- Redirect URL: `https://friendly-neighborhood-product-manager.github.io/DoneZone/`
+
+Do not add `http://localhost:7777/` as a Supabase Auth URL unless you decide to
+test sign-in locally later.
 
 The SQL files in `supabase/` are the starting point for the backend setup.
 Run them in Supabase only after reviewing them for the exact production shape
 you want.
 
+## Supabase Project
+
+- Project URL: `https://phemaiswganfskmhjvkf.supabase.co`
+- Browser key: configured in `src/supabaseClient.js`
+
 ## Next Step
 
-Step 2 is to create the Supabase project, run the schema and policies, and then
-wire the app to Supabase Auth and Postgres.
+After the SQL setup has run in Supabase, publish the app through GitHub Pages:
+
+1. Commit and push these files to `friendly-neighborhood-product-manager/DoneZone`.
+2. In GitHub, open the repository settings.
+3. Open Pages.
+4. Publish from the `main` branch.
+5. Open `https://friendly-neighborhood-product-manager.github.io/DoneZone/`.
+6. Sign in with your email. The sign-in email will redirect back to GitHub Pages.
