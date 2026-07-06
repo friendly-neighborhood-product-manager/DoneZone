@@ -581,6 +581,7 @@ function renderArchivedList(list) {
 function renderCard(list, card, options = {}) {
   const tags = getTagsForCard(card.id);
   const isArchived = Boolean(card.archived || options.archivedView || options.listArchived);
+  const dueClass = getDueStatusClass(card.due_at);
   return `
     <article class="task-card ${card.done ? "done" : ""} ${isArchived ? "archived" : ""}" ${isArchived || list.locked ? "" : 'draggable="true"'} data-drag-type="card" data-card-id="${card.id}" data-list-id="${list.id}">
       <div class="task-title-row">
@@ -604,7 +605,7 @@ function renderCard(list, card, options = {}) {
       </div>
       ${tags.length ? `<div class="tag-row">${tags.map(renderTagPill).join("")}</div>` : ""}
       ${card.comment ? `<p class="comment-preview">${escapeHtml(card.comment)}</p>` : ""}
-      <div class="due-row">${svgIcon("calendar")}${formatDue(card.due_at)}${options.archivedView ? ` · From ${escapeHtml(list.title)}` : ""}</div>
+      <div class="due-row ${dueClass}">${svgIcon("calendar")}${formatDue(card.due_at)}${options.archivedView ? ` · From ${escapeHtml(list.title)}` : ""}</div>
     </article>
   `;
 }
@@ -2724,6 +2725,22 @@ function formatDue(value) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function getDueStatusClass(value) {
+  if (!value) return "";
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) return "";
+
+  const now = Date.now();
+  const dueTime = dueDate.getTime();
+  const next24Hours = now + 24 * 60 * 60 * 1000;
+  const next7Days = now + 7 * 24 * 60 * 60 * 1000;
+
+  if (dueTime < now) return "due-overdue";
+  if (dueTime <= next24Hours) return "due-soon";
+  if (dueTime <= next7Days) return "due-week";
+  return "";
 }
 
 function formatDateTime(value) {
