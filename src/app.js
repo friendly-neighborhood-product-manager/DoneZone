@@ -21,9 +21,10 @@ const icons = {
     '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   logOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
-  moon: '<path d="M20.9 15.1A8.5 8.5 0 0 1 8.9 3.1 7 7 0 1 0 20.9 15.1Z"/>',
+  moon: '<path d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5Z"/><path d="M17 3v4M19 5h-4"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   move: '<path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/>',
+  play: '<circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/>',
   refresh: '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/>',
   restore: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/>',
   settings:
@@ -348,6 +349,7 @@ function renderLoading() {
       <section class="auth-panel" aria-live="polite">
         <img class="auth-logo" src="public/donezone-logo.svg" alt="" />
         <h1>DoneZone</h1>
+        <p>Built by Khizer</p>
         <p>Loading your workspace...</p>
       </section>
     </main>
@@ -360,6 +362,7 @@ function renderAuth() {
       <section class="auth-panel">
         <img class="auth-logo" src="public/donezone-logo.svg" alt="" />
         <h1>DoneZone</h1>
+        <p>Built by Khizer</p>
         <p>Sign in with your email to open your task board.</p>
         ${renderStatus()}
         <form id="magic-link-form" class="auth-form">
@@ -370,7 +373,7 @@ function renderAuth() {
           </button>
         </form>
         <button class="secondary-button wide" type="button" data-action="enter-demo">
-          ${svgIcon("move")}Try Demo Mode
+          ${svgIcon("play")}Try Demo Mode
         </button>
         <p class="auth-note">Sign-in links open the hosted GitHub Pages app.</p>
       </section>
