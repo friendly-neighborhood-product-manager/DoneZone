@@ -1,6 +1,6 @@
 # DoneZone
 
-DoneZone is a lightweight task-board app hosted on GitHub Pages with Supabase Auth and Supabase Postgres as the backend. It is a standalone app with no local workbook backend, no local Python server, and no Oracle-specific branding.
+DoneZone is a lightweight task-board app hosted on GitHub Pages with Supabase Auth and Supabase Postgres as the backend. It is a standalone app with no Oracle-specific branding.
 
 Production URL:
 
@@ -102,29 +102,11 @@ Site URL: https://friendly-neighborhood-product-manager.github.io/DoneZone/
 Redirect URL: https://friendly-neighborhood-product-manager.github.io/DoneZone/
 ```
 
-Do not add `http://localhost:7777/` as a Supabase Auth URL unless you intentionally decide to test sign-in locally later.
-
 The SQL files in `supabase/` are the backend setup files:
 
 1. Run `supabase/schema.sql` in the Supabase SQL editor.
 2. Run `supabase/policies.sql` after the schema is created.
 3. Confirm row-level security is enabled for user-owned tables.
-
-## Local Preview
-
-Local preview is only for checking static files on your machine. Supabase sign-in is configured for the hosted GitHub Pages URL.
-
-From the `DoneZone/` folder:
-
-```bash
-python3 -m http.server 7777
-```
-
-Then open:
-
-```text
-http://localhost:7777/
-```
 
 ## Deployment
 
