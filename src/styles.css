@@ -782,6 +782,18 @@ svg {
   height: 14px;
 }
 
+.due-row.due-week {
+  color: var(--success);
+}
+
+.due-row.due-soon {
+  color: var(--warning);
+}
+
+.due-row.due-overdue {
+  color: var(--danger);
+}
+
 .action-button.compact {
   width: 28px;
   min-height: 28px;
