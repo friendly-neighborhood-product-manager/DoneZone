@@ -21,12 +21,14 @@ const icons = {
     '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   logOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  moon: '<path d="M20.9 15.1A8.5 8.5 0 0 1 8.9 3.1 7 7 0 1 0 20.9 15.1Z"/>',
   more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   move: '<path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l-3 3-3-3"/><path d="M19 9l3 3-3 3"/><path d="M2 12h20"/><path d="M12 2v20"/>',
   refresh: '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/>',
   restore: '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/>',
   settings:
     '<path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   tag: '<path d="M20.6 13.2 13.2 20.6a2 2 0 0 1-2.8 0L3 13.2V3h10.2l7.4 7.4a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   trash:
     '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
@@ -56,11 +58,14 @@ const state = {
   backups: [],
   backupSettings: null,
   showArchived: false,
+  theme: loadThemePreference(),
   modal: null,
   drag: null,
   notice: "",
   error: "",
 };
+
+applyTheme();
 
 appRoot.addEventListener("submit", handleSubmit);
 appRoot.addEventListener("click", handleClick);
@@ -76,6 +81,8 @@ document.addEventListener("keydown", (event) => {
     closeModal();
   }
 });
+document.addEventListener("click", handleDocumentClick);
+document.addEventListener("toggle", handleMenuToggle, true);
 
 init();
 
@@ -139,6 +146,10 @@ async function hydrateData() {
   if (await repairDuplicateBoardTitles()) {
     return hydrateData();
   }
+
+  state.theme = normalizeTheme(appStateResult.data?.theme || state.theme);
+  saveThemePreference(state.theme);
+  applyTheme();
 
   state.tags = tagsResult.data || [];
 
@@ -305,7 +316,7 @@ async function saveActiveBoard(boardId) {
   const { error } = await supabase.from("app_state").upsert({
     user_id: state.user.id,
     active_board_id: boardId,
-    theme: "light",
+    theme: state.theme,
   });
 
   throwIfSupabaseError(error);
@@ -401,6 +412,7 @@ function renderApp() {
             <button class="action-button ${state.showArchived ? "active" : ""}" type="button" title="${state.showArchived ? "Hide archived" : "Show archived"}" data-action="toggle-archived">${svgIcon("archive")}</button>
             <button class="action-button" type="button" title="Back up board" data-action="backup">${svgIcon("backup")}</button>
             <button class="action-button" type="button" title="Manage labels" data-action="open-labels">${svgIcon("tag")}</button>
+            <button class="action-button" type="button" title="${state.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}" data-action="toggle-theme">${svgIcon(state.theme === "dark" ? "sun" : "moon")}</button>
             <details class="menu-wrap board-menu">
               <summary class="action-button menu-trigger" title="Board options" aria-label="Board options">${svgIcon("more")}</summary>
               <div class="options-menu">
@@ -485,9 +497,18 @@ function renderList(list) {
         </div>
       </header>
       <div class="cards" data-drop-list="${list.id}">
-        ${cards.length ? cards.map((card) => renderCard(list, card)).join("") : '<div class="empty-list">No tasks</div>'}
+        ${cards.map((card) => renderCard(list, card)).join("")}
+        ${renderAddTaskCard(list)}
       </div>
     </section>
+  `;
+}
+
+function renderAddTaskCard(list) {
+  return `
+    <button class="add-task-card" type="button" data-action="open-card-form" data-list-id="${list.id}" ${list.locked ? "disabled" : ""}>
+      ${svgIcon("add")}Create New Task
+    </button>
   `;
 }
 
@@ -971,6 +992,7 @@ async function handleClick(event) {
       state.showArchived = !state.showArchived;
     },
     "toggle-card": () => toggleCard(button.dataset.cardId),
+    "toggle-theme": toggleTheme,
     "transfer-card": () => transferCard(button.dataset.listId),
     "unlock-list": () => setListLocked(button.dataset.listId, false),
   };
@@ -984,6 +1006,26 @@ function handleChange(event) {
   if (event.target.matches('input[name="done"][data-card-id]')) {
     runAction(() => toggleCard(event.target.dataset.cardId));
   }
+}
+
+function handleDocumentClick(event) {
+  if (!event.target.closest("details.menu-wrap")) {
+    closeOpenMenus();
+  }
+}
+
+function handleMenuToggle(event) {
+  const menu = event.target;
+  if (!menu.matches?.("details.menu-wrap[open]")) return;
+  document.querySelectorAll("details.menu-wrap[open]").forEach((openMenu) => {
+    if (openMenu !== menu) openMenu.removeAttribute("open");
+  });
+}
+
+function closeOpenMenus() {
+  document.querySelectorAll("details.menu-wrap[open]").forEach((menu) => {
+    menu.removeAttribute("open");
+  });
 }
 
 async function sendMagicLink(form) {
@@ -1232,6 +1274,21 @@ async function switchBoard(boardId) {
   if (!boardId || boardId === state.activeBoard?.id) return;
   state.showArchived = false;
   await saveActiveBoard(boardId);
+}
+
+async function toggleTheme() {
+  state.theme = state.theme === "dark" ? "light" : "dark";
+  saveThemePreference(state.theme);
+  applyTheme();
+
+  const { error } = await supabase.from("app_state").upsert({
+    user_id: state.user.id,
+    active_board_id: state.activeBoard?.id || null,
+    theme: state.theme,
+  });
+
+  throwIfSupabaseError(error);
+  state.notice = state.theme === "dark" ? "Dark mode enabled." : "Light mode enabled.";
 }
 
 async function toggleCard(cardId) {
@@ -1707,12 +1764,12 @@ function handleDragOver(event) {
     return;
   }
 
-  const dropList = event.target.closest("[data-drop-list]");
-  const targetList = dropList ? getListById(dropList.dataset.dropList) : null;
-  if (!dropList || targetList?.locked) return;
+  const dropColumn = event.target.closest(".list-column");
+  const targetList = dropColumn ? getListById(dropColumn.dataset.listId) : null;
+  if (!dropColumn || dropColumn.dataset.listId === "archived" || targetList?.locked) return;
 
   event.preventDefault();
-  dropList.closest(".list-column")?.classList.add("drag-over");
+  dropColumn.classList.add("drag-over");
 }
 
 function handleDragLeave(event) {
@@ -1750,12 +1807,12 @@ async function handleDrop(event) {
     return;
   }
 
-  const dropList = event.target.closest("[data-drop-list]");
-  if (!dropList) return;
+  const dropColumn = event.target.closest(".list-column");
+  if (!dropColumn || dropColumn.dataset.listId === "archived") return;
 
   event.preventDefault();
   const draggedCardId = state.drag.cardId;
-  const targetListId = dropList.dataset.dropList;
+  const targetListId = dropColumn.dataset.listId;
   const targetCard = event.target.closest("[data-card-id]");
   const targetCardId = targetCard?.dataset.cardId || null;
   let insertAfter = false;
@@ -2004,6 +2061,30 @@ function normalizeTitle(title) {
 function normalizeColor(value, fallback) {
   const color = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
+
+function normalizeTheme(value) {
+  return value === "dark" ? "dark" : "light";
+}
+
+function loadThemePreference() {
+  try {
+    return normalizeTheme(localStorage.getItem("donezone-theme") || "light");
+  } catch (_error) {
+    return "light";
+  }
+}
+
+function saveThemePreference(theme) {
+  try {
+    localStorage.setItem("donezone-theme", normalizeTheme(theme));
+  } catch (_error) {
+    // Ignore storage failures; Supabase persistence still handles signed-in users.
+  }
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = normalizeTheme(state.theme);
 }
 
 function normalizeDueValue(value) {
